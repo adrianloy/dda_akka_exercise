@@ -13,3 +13,6 @@ bin/
 target
 datasets/
 output/
+./akka-tutorial/passwords.txt
+/akka-tutorial/passwords.txt
+
