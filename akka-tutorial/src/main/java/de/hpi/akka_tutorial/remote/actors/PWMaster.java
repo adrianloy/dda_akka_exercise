@@ -19,34 +19,37 @@ import akka.actor.SupervisorStrategy;
 import akka.actor.Terminated;
 import akka.japi.pf.DeciderBuilder;
 import akka.remote.RemoteScope;
+import de.hpi.akka_tutorial.remote.actors.Master.PrimesMessage;
 import de.hpi.akka_tutorial.remote.actors.scheduling.SchedulingStrategy;
 import de.hpi.akka_tutorial.remote.messages.ShutdownMessage;
 import scala.concurrent.duration.Duration;
 
 /**
- * The master receives ranges of numbers that it should find all primes in. This is done by delegation to slaves.
+ * The master receives password hashes and ranges of possible passwords to brute force it. This is done by delegation to slaves.
  */
-public class Master extends AbstractLoggingActor {
+public class PWMaster extends AbstractLoggingActor {
 
 	public static final String DEFAULT_NAME = "master";
 
 	/**
-	 * Create the {@link Props} necessary to instantiate new {@link Master} actors.
+	 * Create the {@link Props} necessary to instantiate new {@link PWMaster} actors.
 	 *
 	 * @return the {@link Props}
 	 */
 	public static Props props(final ActorRef listener, SchedulingStrategy.Factory schedulingStrategyFactory, final int numLocalWorkers) {
-		return Props.create(Master.class, () -> new Master(listener, schedulingStrategyFactory, numLocalWorkers));
+		return Props.create(PWMaster.class, () -> new PWMaster(listener, schedulingStrategyFactory, numLocalWorkers));
 	}
 
 	/**
-	 * Asks the {@link Master} to start the distributed calculation of prime numbers in a given range.
+	 * Asks the {@link PWMaster} to start the distributed calculation of prime numbers in a given range.
 	 */
-	public static class RangeMessage implements Serializable {
+	public static class PWRangeMessage implements Serializable {
 
 		private static final long serialVersionUID = 1538940836039448197L;
 
-		private long startNumber, endNumber;
+		private int startNumber, endNumber;
+		
+		private String pwhash;
 
 		/**
 		 * Construct a new {@link RangeMessage} object.
@@ -54,7 +57,7 @@ public class Master extends AbstractLoggingActor {
 		 * @param startNumber first number in the range to be checked as prime (inclusive)
 		 * @param endNumber last number in the range to be checked as prime (inclusive)
 		 */
-		public RangeMessage(final long startNumber, final long endNumber) {
+		public PWRangeMessage(final int startNumber, final int endNumber) {
 			this.startNumber = startNumber;
 			this.endNumber = endNumber;
 		}
@@ -63,7 +66,7 @@ public class Master extends AbstractLoggingActor {
 		 * For serialization/deserialization only.
 		 */
 		@SuppressWarnings("unused")
-		private RangeMessage() {
+		private PWRangeMessage() {
 		}
 
 		@Override
@@ -73,37 +76,38 @@ public class Master extends AbstractLoggingActor {
 	}
 	
 
+
 	/**
-	 * Asks the {@link Master} to process some primes as the answer to a {@link Worker.ValidationMessage}.
+	 * Answer to a {@link PWCrackWorker.PWValidationMessage}. Tells the {@link PWMaster} the password if it was found.
 	 */
-	public static class PrimesMessage implements Serializable {
+	public static class PWMessage implements Serializable {
 
 		private static final long serialVersionUID = 4862570515887001983L;
 
 		private int requestId;
 
-		private List<Long> primes;
+		private int password;
 
-		private boolean isComplete;
+		private String user;
 
 		/**
 		 * Create a new instance.
 		 *
 		 * @param requestId  the ID of the query that is being served
-		 * @param primes     some discovered primes
-		 * @param isComplete whether all primes of the current subquery have been discovered
+		 * @param password   contains the password if found, otherwise -1
+		 * @param isComplete atm always true
 		 */
-		public PrimesMessage(final int requestId, final List<Long> primes, final boolean isComplete) {
+		public PWMessage(final int requestId, final int password, final String user) {
 			this.requestId = requestId;
-			this.primes = primes;
-			this.isComplete = isComplete;
+			this.password = password;
+			this.user = user;
 		}
 		
 		/**
 		 * For serialization/deserialization only.
 		 */
 		@SuppressWarnings("unused")
-		private PrimesMessage() {
+		private PWMessage() {
 		}
 
 		@Override
@@ -111,20 +115,20 @@ public class Master extends AbstractLoggingActor {
 			if (this == o) return true;
 			if (o == null || getClass() != o.getClass()) 
 				return false;
-			final PrimesMessage that = (PrimesMessage) o;
+			final PWMessage that = (PWMessage) o;
 			return this.requestId == that.requestId &&
-					this.isComplete == that.isComplete &&
-					Objects.equals(this.primes, that.primes);
+					Objects.equals(this.user, that.user) &&
+					Objects.equals(this.password, that.password);
 		}
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(this.requestId, this.primes, this.isComplete);
+			return Objects.hash(this.requestId, this.password, this.user);
 		}
 	}
 
 	/**
-	 * Asks the {@link Master} to schedule work to a new remote actor system.
+	 * Asks the {@link PWMaster} to schedule work to a new remote actor system.
 	 */
 	public static class RemoteSystemMessage implements Serializable {
 
@@ -150,8 +154,8 @@ public class Master extends AbstractLoggingActor {
 					.match(Exception.class, e -> stop())
 					.matchAny(o -> escalate())
 					.build());
-
-	// A reference to the listener actor that collects all calculated prime numbers
+	
+	// A reference to the listener actor that collects all cracked passwords
 	private final ActorRef listener;
 	
 	// The scheduling strategy that splits range messages into smaller tasks and distributes these to the workers
@@ -164,13 +168,13 @@ public class Master extends AbstractLoggingActor {
 	private boolean isAcceptingRequests = true;
 
 	/**
-	 * Construct a new {@link Master} object.
+	 * Construct a new {@link PWMaster} object.
 	 * 
 	 * @param listener a reference to an {@link Listener} actor to send results to
 	 * @param schedulingStrategyFactory defines which {@link SchedulingStrategy} to use
 	 * @param numLocalWorkers number of workers that this master should start locally
 	 */
-	public Master(final ActorRef listener, SchedulingStrategy.Factory schedulingStrategyFactory, int numLocalWorkers) {
+	public PWMaster(final ActorRef listener, SchedulingStrategy.Factory schedulingStrategyFactory, int numLocalWorkers) {
 		
 		// Save the reference to the Listener actor
 		this.listener = listener;
@@ -211,15 +215,15 @@ public class Master extends AbstractLoggingActor {
 
 	@Override
 	public SupervisorStrategy supervisorStrategy() {
-		return Master.strategy;
+		return PWMaster.strategy;
 	}
 
 	@Override
 	public Receive createReceive() {
 		return receiveBuilder()
 				.match(RemoteSystemMessage.class, this::handle)
-				.match(RangeMessage.class, this::handle)
-				.match(PrimesMessage.class, this::handle)
+				.match(PWRangeMessage.class, this::handle)
+				.match(PWMessage.class, this::handle)
 				.match(ShutdownMessage.class, this::handle)
 				.match(Terminated.class, this::handle)
 				.matchAny(object -> this.log().info(this.getClass().getName() + " received unknown message: " + object.toString()))
@@ -239,8 +243,29 @@ public class Master extends AbstractLoggingActor {
 
 		this.log().info("New worker: " + worker);
 	}
+	
+	private void handle(PWMessage message) {
 
-	private void handle(RangeMessage message) {
+		// If the worker found the password tell the listener
+		if (message.password > 0) { 
+			String pw = String.valueOf(message.password);
+			while (pw.length() < 7) { // if it's stupid, but working...
+				pw = "0" + pw;
+			}
+		
+			// Forward the cracked password to the listener
+			this.listener.tell(new ExerciseListener.PWListenerMessage(pw, message.user), this.getSelf());
+		}
+		// Notify the scheduler that the worker has finished its task
+		this.schedulingStrategy.finished(message.requestId, this.getSender());
+		
+		// Check if work is complete and stop the actor hierarchy if true
+		if (this.hasFinished()) {
+			this.stopSelfAndListener();
+		}
+	}
+
+	private void handle(PWRangeMessage message) {
 		
 		// Check if we are still accepting requests
 		if (!this.isAcceptingRequests) {
@@ -257,24 +282,6 @@ public class Master extends AbstractLoggingActor {
 		
 		// Stop receiving new queries
 		this.isAcceptingRequests = false;
-		
-		// Check if work is complete and stop the actor hierarchy if true
-		if (this.hasFinished()) {
-			this.stopSelfAndListener();
-		}
-	}
-	
-	private void handle(PrimesMessage message) {
-		
-		// Forward the calculated primes to the listener
-		this.listener.tell(new Listener.PrimesMessage(message.primes), this.getSelf());
-
-		// If the worker only returned an intermediate result, no further action is required
-		if (!message.isComplete) 
-			return;
-		
-		// Notify the scheduler that the worker has finished its task
-		this.schedulingStrategy.finished(message.requestId, this.getSender());
 		
 		// Check if work is complete and stop the actor hierarchy if true
 		if (this.hasFinished()) {
