@@ -20,6 +20,7 @@ import akka.actor.Terminated;
 import akka.japi.pf.DeciderBuilder;
 import akka.remote.RemoteScope;
 import de.hpi.akka_tutorial.remote.actors.Master.PrimesMessage;
+import de.hpi.akka_tutorial.remote.actors.scheduling.PWSchedulingStrategy;
 import de.hpi.akka_tutorial.remote.actors.scheduling.SchedulingStrategy;
 import de.hpi.akka_tutorial.remote.messages.ShutdownMessage;
 import scala.concurrent.duration.Duration;
@@ -36,20 +37,20 @@ public class PWMaster extends AbstractLoggingActor {
 	 *
 	 * @return the {@link Props}
 	 */
-	public static Props props(final ActorRef listener, SchedulingStrategy.Factory schedulingStrategyFactory, final int numLocalWorkers) {
+	public static Props props(final ActorRef listener, PWSchedulingStrategy.PWFactory schedulingStrategyFactory, final int numLocalWorkers) {
 		return Props.create(PWMaster.class, () -> new PWMaster(listener, schedulingStrategyFactory, numLocalWorkers));
 	}
 
 	/**
-	 * Asks the {@link PWMaster} to start the distributed calculation of prime numbers in a given range.
+	 * Asks the {@link PWMaster} to start the distributed password brute force calculation of the pwhash
 	 */
-	public static class PWRangeMessage implements Serializable {
+	public static class PWHashMessage implements Serializable {
 
 		private static final long serialVersionUID = 1538940836039448197L;
-
-		private int startNumber, endNumber;
 		
 		private String pwhash;
+		
+		private String username;
 
 		/**
 		 * Construct a new {@link RangeMessage} object.
@@ -57,21 +58,23 @@ public class PWMaster extends AbstractLoggingActor {
 		 * @param startNumber first number in the range to be checked as prime (inclusive)
 		 * @param endNumber last number in the range to be checked as prime (inclusive)
 		 */
-		public PWRangeMessage(final int startNumber, final int endNumber) {
-			this.startNumber = startNumber;
-			this.endNumber = endNumber;
+		public PWHashMessage(final String pwhash, final String username) {
+			//this.startNumber = startNumber;
+			//this.endNumber = endNumber;
+			this.pwhash = pwhash;
+			this.username = username;
 		}
 
 		/**
 		 * For serialization/deserialization only.
 		 */
 		@SuppressWarnings("unused")
-		private PWRangeMessage() {
+		private PWHashMessage() {
 		}
 
 		@Override
 		public String toString() {
-			return String.format("%s[%,d..%,d]", this.getClass().getSimpleName(), this.startNumber, this.endNumber);
+			return String.format("%s[%,d..%,d]", this.getClass().getSimpleName(), this.username, this.pwhash);
 		}
 	}
 	
@@ -159,7 +162,7 @@ public class PWMaster extends AbstractLoggingActor {
 	private final ActorRef listener;
 	
 	// The scheduling strategy that splits range messages into smaller tasks and distributes these to the workers
-	private final SchedulingStrategy schedulingStrategy;
+	private final PWSchedulingStrategy schedulingStrategy;
 
 	// A helper variable to assign unique IDs to each range query
 	private int nextQueryId = 0;
@@ -174,7 +177,7 @@ public class PWMaster extends AbstractLoggingActor {
 	 * @param schedulingStrategyFactory defines which {@link SchedulingStrategy} to use
 	 * @param numLocalWorkers number of workers that this master should start locally
 	 */
-	public PWMaster(final ActorRef listener, SchedulingStrategy.Factory schedulingStrategyFactory, int numLocalWorkers) {
+	public PWMaster(final ActorRef listener, PWSchedulingStrategy.PWFactory schedulingStrategyFactory, int numLocalWorkers) {
 		
 		// Save the reference to the Listener actor
 		this.listener = listener;
@@ -222,7 +225,7 @@ public class PWMaster extends AbstractLoggingActor {
 	public Receive createReceive() {
 		return receiveBuilder()
 				.match(RemoteSystemMessage.class, this::handle)
-				.match(PWRangeMessage.class, this::handle)
+				.match(PWHashMessage.class, this::handle)
 				.match(PWMessage.class, this::handle)
 				.match(ShutdownMessage.class, this::handle)
 				.match(Terminated.class, this::handle)
@@ -265,7 +268,7 @@ public class PWMaster extends AbstractLoggingActor {
 		}
 	}
 
-	private void handle(PWRangeMessage message) {
+	private void handle(PWHashMessage message) {
 		
 		// Check if we are still accepting requests
 		if (!this.isAcceptingRequests) {
@@ -274,7 +277,7 @@ public class PWMaster extends AbstractLoggingActor {
 		}
 
 		// Schedule the request
-		this.schedulingStrategy.schedule(this.nextQueryId, message.startNumber, message.endNumber);
+		this.schedulingStrategy.schedule(this.nextQueryId, message.username, message.pwhash);
 		this.nextQueryId++;
 	}
 

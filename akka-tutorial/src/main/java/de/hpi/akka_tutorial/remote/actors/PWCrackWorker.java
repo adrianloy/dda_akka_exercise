@@ -47,7 +47,7 @@ public class PWCrackWorker extends AbstractLoggingActor {
 		 * @param rangeMin first number in the range to be checked as password (inclusive)
 		 * @param rangeMax last number in the range to be checked as password (inclusive)
 		 */
-		public PWValidationMessage(int id, int rangeMin, int rangeMax, String pwhash, String user) {
+		public PWValidationMessage(int id, int rangeMin, int rangeMax, String user, String pwhash) {
 			this.id = id;
 			this.rangeMin = rangeMin;
 			this.rangeMax = rangeMax;

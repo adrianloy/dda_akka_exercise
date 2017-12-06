@@ -1,21 +1,68 @@
 package de.hpi.akka_tutorial;
 
 import java.net.InetAddress;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.net.UnknownHostException;
+import java.util.HashSet;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 import com.beust.jcommander.Parameters;
+import de.hpi.akka_tutorial.Participant;
 import de.hpi.akka_tutorial.remote.Calculator;
 import de.hpi.akka_tutorial.remote.actors.scheduling.ReactiveSchedulingStrategy;
 import de.hpi.akka_tutorial.remote.actors.scheduling.RoundRobinSchedulingStrategy;
 import de.hpi.akka_tutorial.remote.actors.scheduling.SchedulingStrategy;
 
+
 public class ExerciseMain {
 
     public static void main(String[] args) {
         // TODO: Read CSV file, path to is should be in args[0]. Then start a PWmaster and a PWslave
+    	
+    	 String csvFile = args[0];
+         BufferedReader br = null;
+         String line = "";
+         String cvsSplitBy = ",";
+         HashSet<Participant> all_participants = new HashSet<Participant>();
+         try {
+
+             br = new BufferedReader(new FileReader(csvFile));
+             while ((line = br.readLine()) != null) {
+
+                 // use comma as separator
+                 String[] user = line.split(cvsSplitBy);
+                 Participant p = new Participant(Integer.parseInt(user[0]), user[1], user[2], user[3]);
+                 all_participants.add(p);
+             }
+
+         } catch (FileNotFoundException e) {
+             e.printStackTrace();
+         } catch (IOException e) {
+             e.printStackTrace();
+         } finally {
+             if (br != null) {
+                 try {
+                     br.close();
+                 } catch (IOException e) {
+                     e.printStackTrace();
+                 }
+             }
+         }
+         
+         
+    }
+    	
+    /**
+     * This is like the old main function of the akka tutorial, but with PWCracking Actors instead of primenumber.
+     *  It can be used to easily start a master or a slave.
+     * @param args must be like the command line arguments
+     */
+    public static void start_system(String[] args) {
     	// Parse the command-line args.
         MasterCommand masterCommand = new MasterCommand();
         SlaveCommand slaveCommand = new SlaveCommand();
@@ -102,7 +149,7 @@ public class ExerciseMain {
          * Defines the number of workers that this actor system should spawn.
          */
         @Parameter(names = {"-w", "--workers"}, description = "number of workers to start locally")
-        int numLocalWorkers = 0;
+        int numLocalWorkers = 4;
 
         /**
          * Defines the scheduling strategy to be used in the master.
