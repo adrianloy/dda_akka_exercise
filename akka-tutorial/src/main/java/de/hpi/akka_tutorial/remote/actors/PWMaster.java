@@ -19,9 +19,7 @@ import akka.actor.SupervisorStrategy;
 import akka.actor.Terminated;
 import akka.japi.pf.DeciderBuilder;
 import akka.remote.RemoteScope;
-import de.hpi.akka_tutorial.remote.actors.Master.PrimesMessage;
 import de.hpi.akka_tutorial.remote.actors.scheduling.PWSchedulingStrategy;
-import de.hpi.akka_tutorial.remote.actors.scheduling.SchedulingStrategy;
 import de.hpi.akka_tutorial.remote.messages.ShutdownMessage;
 import scala.concurrent.duration.Duration;
 
@@ -189,7 +187,7 @@ public class PWMaster extends AbstractLoggingActor {
 		for (int i = 0; i < numLocalWorkers; i++) {
 			
 			// Create a new worker
-			ActorRef worker = this.getContext().actorOf(Worker.props());
+			ActorRef worker = this.getContext().actorOf(PWCrackWorker.props());
 			this.schedulingStrategy.addWorker(worker);
 
 			// Add the worker to the watch list and our router

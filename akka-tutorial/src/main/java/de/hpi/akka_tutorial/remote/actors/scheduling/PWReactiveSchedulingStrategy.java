@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 
 import akka.actor.ActorRef;
 import de.hpi.akka_tutorial.remote.actors.PWCrackWorker;
-import de.hpi.akka_tutorial.remote.actors.Worker;
 
 public class PWReactiveSchedulingStrategy implements PWSchedulingStrategy {
 

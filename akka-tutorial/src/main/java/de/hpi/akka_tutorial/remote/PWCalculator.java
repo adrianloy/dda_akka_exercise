@@ -11,12 +11,9 @@ import akka.actor.ActorSystem;
 import akka.actor.Address;
 import akka.actor.PoisonPill;
 import de.hpi.akka_tutorial.remote.actors.scheduling.PWReactiveSchedulingStrategy.PWFactory;
-import de.hpi.akka_tutorial.remote.actors.scheduling.SchedulingStrategy;
 import de.hpi.akka_tutorial.remote.messages.ShutdownMessage;
 import de.hpi.akka_tutorial.Participant;
 import de.hpi.akka_tutorial.remote.actors.ExerciseListener;
-import de.hpi.akka_tutorial.remote.actors.Listener;
-import de.hpi.akka_tutorial.remote.actors.Master;
 import de.hpi.akka_tutorial.remote.actors.PWMaster;
 import de.hpi.akka_tutorial.remote.actors.Reaper;
 import de.hpi.akka_tutorial.remote.actors.Shepherd;
@@ -90,7 +87,7 @@ public class PWCalculator {
 		actorSystem.actorOf(Reaper.props(), Reaper.DEFAULT_NAME);
 
 		// Create the Listener
-		final ActorRef listener = actorSystem.actorOf(ExerciseListener.props(), Listener.DEFAULT_NAME);
+		final ActorRef listener = actorSystem.actorOf(ExerciseListener.props(), ExerciseListener.DEFAULT_NAME);
 
 		// Create the Master
 		final ActorRef master = actorSystem.actorOf(PWMaster.props(listener, schedulingStrategyFactory, numLocalWorkers), PWMaster.DEFAULT_NAME);
