@@ -1,9 +1,12 @@
 package de.hpi.akka_tutorial.remote.actors;
 
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.io.Serializable;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -20,6 +23,8 @@ import de.hpi.akka_tutorial.remote.messages.ShutdownMessage;
 public class ExerciseListener extends AbstractLoggingActor {
 
 	public static final String DEFAULT_NAME = "exerciselistener";
+	
+	public static final String output_filepath = "./passwords.txt";
 
 	/**
 	 * Create the {@link Props} necessary to instantiate new {@link ExerciseListener} actors.
@@ -89,13 +94,24 @@ public class ExerciseListener extends AbstractLoggingActor {
 	}
 	
 	private void handle(PWListenerMessage message) {
+		System.out.println("WE FOUND A PASSWORD FUUUUCK YEAH!!11");
 		this.pw_map.put(message.user, message.password);
 	}
 	
 	private void handle(ShutdownMessage message) {
-		// We could write all primes to disk here
-		
+		// Write all found passwords to disk
+		String str_out = "";
+		Iterator<Map.Entry<String, String>> it = this.pw_map.entrySet().iterator();
+		while (it.hasNext()) {
+			Map.Entry<String, String> pair = (Map.Entry<String, String>)it.next();
+			str_out += pair.getKey() + "," + pair.getValue() + "/n";
+		}
+		try(  PrintWriter out = new PrintWriter(ExerciseListener.output_filepath)  ){
+		    out.println(str_out);
+		} catch (FileNotFoundException e) {
+			System.out.println("Could not write file to " + ExerciseListener.output_filepath);
+			e.printStackTrace();
+		}
 		this.getSelf().tell(PoisonPill.getInstance(), this.getSelf());
-	}
-	
+	}	
 }

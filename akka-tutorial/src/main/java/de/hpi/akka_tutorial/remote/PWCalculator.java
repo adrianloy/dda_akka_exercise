@@ -10,7 +10,7 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Address;
 import akka.actor.PoisonPill;
-import de.hpi.akka_tutorial.remote.actors.scheduling.PWReactiveSchedulingStrategy.Factory;
+import de.hpi.akka_tutorial.remote.actors.scheduling.PWReactiveSchedulingStrategy.PWFactory;
 import de.hpi.akka_tutorial.remote.actors.scheduling.SchedulingStrategy;
 import de.hpi.akka_tutorial.remote.messages.ShutdownMessage;
 import de.hpi.akka_tutorial.Participant;
@@ -80,7 +80,7 @@ public class PWCalculator {
 		PWCalculator.awaitTermination(actorSystem);
 	}
 
-	public static void runMaster(String host, int port, Factory schedulingStrategyFactory, int numLocalWorkers, HashSet<Participant> all_participants) {
+	public static void runMaster(String host, int port, PWFactory schedulingStrategyFactory, int numLocalWorkers, HashSet<Participant> all_participants) {
 		
 		// Create the ActorSystem
 		final Config config = AkkaUtils.createRemoteAkkaConfig(host, port);
@@ -102,6 +102,8 @@ public class PWCalculator {
 		for (Participant p : all_participants) {
 			master.tell(new PWMaster.PWHashMessage(p.getName(), p.getPwhash()), ActorRef.noSender());
 		}
+		
+		PWCalculator.enterInteractiveLoop(listener, master, shepherd);
 		PWCalculator.shutdown(shepherd, master);
 		
 		System.out.println("Stopping...");
@@ -110,4 +112,37 @@ public class PWCalculator {
 		PWCalculator.awaitTermination(actorSystem);
 		
 	}
+	
+	private static void enterInteractiveLoop(final ActorRef listener, final ActorRef master, final ActorRef shepherd) {
+		
+		// Read ranges from the console and process them
+		final Scanner scanner = new Scanner(System.in);
+		while (true) {
+			// Sleep to reduce mixing of log messages with the regular stdout messages.
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+			}
+			
+			// Read input
+			System.out.println("> Enter ...\n"
+					+ "  \"exit\" for a graceful shutdown,\n"
+					+ "  \"kill\" for a hard shutdown:");
+			String line = scanner.nextLine();
+
+			switch (line) {
+				case "exit":
+					PWCalculator.shutdown(shepherd, master);
+					scanner.close();
+					return;
+				case "kill":
+					PWCalculator.kill(listener, master, shepherd);
+					scanner.close();
+					return;
+				default:
+					System.out.println("Invalid option.");
+			}
+		}
+	}
+	
 }

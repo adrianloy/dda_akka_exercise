@@ -14,223 +14,244 @@ import com.beust.jcommander.ParameterException;
 import com.beust.jcommander.Parameters;
 import de.hpi.akka_tutorial.Participant;
 import de.hpi.akka_tutorial.remote.Calculator;
+import de.hpi.akka_tutorial.remote.PWCalculator;
+import de.hpi.akka_tutorial.remote.actors.scheduling.PWReactiveSchedulingStrategy;
 import de.hpi.akka_tutorial.remote.actors.scheduling.ReactiveSchedulingStrategy;
 import de.hpi.akka_tutorial.remote.actors.scheduling.RoundRobinSchedulingStrategy;
 import de.hpi.akka_tutorial.remote.actors.scheduling.SchedulingStrategy;
 
-
 public class ExerciseMain {
 
-    public static void main(String[] args) {
-        // TODO: Read CSV file, path to is should be in args[0]. Then start a PWmaster and a PWslave
-    	
-    	 String csvFile = args[0];
-         BufferedReader br = null;
-         String line = "";
-         String cvsSplitBy = ",";
-         HashSet<Participant> all_participants = new HashSet<Participant>();
-         try {
+	public static void main(String[] args) {
+		// Read CSV file, path to is should be in args[0]. 
+		// Then start a PWmaster with 4 local workers
+		String csvFile = "";
+		if (args.length > 0) {
+			csvFile = args[0];
+		} else {
+			csvFile = "./students.csv";
+		}
+		BufferedReader br = null;
+		String line = "";
+		String cvsSplitBy = ",";
+		HashSet<Participant> all_participants = new HashSet<Participant>();
+		try {
 
-             br = new BufferedReader(new FileReader(csvFile));
-             while ((line = br.readLine()) != null) {
+			br = new BufferedReader(new FileReader(csvFile));
+			while ((line = br.readLine()) != null) {
 
-                 // use comma as separator
-                 String[] user = line.split(cvsSplitBy);
-                 Participant p = new Participant(Integer.parseInt(user[0]), user[1], user[2], user[3]);
-                 all_participants.add(p);
-             }
+				// use comma as separator
+				String[] user = line.split(cvsSplitBy);
+				// for (String s : user) {
+				//System.out.println(user[1]);
+				// }
+				if (user.length == 4) {
+					Participant p = new Participant(Integer.parseInt(user[0]), user[1], user[2], user[3]);
+					all_participants.add(p);
+				}
+			}
 
-         } catch (FileNotFoundException e) {
-             e.printStackTrace();
-         } catch (IOException e) {
-             e.printStackTrace();
-         } finally {
-             if (br != null) {
-                 try {
-                     br.close();
-                 } catch (IOException e) {
-                     e.printStackTrace();
-                 }
-             }
-         }
-         
-         
-    }
-    	
-    /**
-     * This is like the old main function of the akka tutorial, but with PWCracking Actors instead of primenumber.
-     *  It can be used to easily start a master or a slave.
-     * @param args must be like the command line arguments
-     */
-    public static void start_system(String[] args) {
-    	// Parse the command-line args.
-        MasterCommand masterCommand = new MasterCommand();
-        SlaveCommand slaveCommand = new SlaveCommand();
-        JCommander jCommander = JCommander.newBuilder()
-                .addCommand("master", masterCommand)
-                .addCommand("slave", slaveCommand)
-                .build();
+		} catch (FileNotFoundException e) {
+			System.out.println("Could not find students.csv file. I was looking for it at " + csvFile);
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (br != null) {
+				try {
+					br.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		// Calculator.runMaster(masterCommand.host, masterCommand.port,
+		// schedulingStrategyFactory, masterCommand.numLocalWorkers);
+		System.out.println("Found " + all_participants.size() + " students in students.csv");
+		PWCalculator.runMaster("localhost", 7877, new PWReactiveSchedulingStrategy.PWFactory(), 4, all_participants);
 
-        try {
-            jCommander.parse(args);
+	}
 
-            if (jCommander.getParsedCommand() == null) {
-                throw new ParameterException("No command given.");
-            }
+	/**
+	 * This is like the old main function of the akka tutorial, but with PWCracking
+	 * Actors instead of primenumber. It can be used to easily start a master or a
+	 * slave.
+	 * 
+	 * @param args
+	 *            must be like the command line arguments
+	 */
+	public static void start_system(String[] args) {
+		// Parse the command-line args.
+		MasterCommand masterCommand = new MasterCommand();
+		SlaveCommand slaveCommand = new SlaveCommand();
+		JCommander jCommander = JCommander.newBuilder().addCommand("master", masterCommand)
+				.addCommand("slave", slaveCommand).build();
 
-            // Start a master or slave.
-            switch (jCommander.getParsedCommand()) {
-                case "master":
-                    startMaster(masterCommand);
-                    break;
-                case "slave":
-                    startSlave(slaveCommand);
-                    break;
-                default:
-                    throw new AssertionError();
+		try {
+			jCommander.parse(args);
 
-            }
+			if (jCommander.getParsedCommand() == null) {
+				throw new ParameterException("No command given.");
+			}
 
-        } catch (ParameterException e) {
-            System.out.printf("Could not parse args: %s\n", e.getMessage());
-            if (jCommander.getParsedCommand() == null) {
-                jCommander.usage();
-            } else {
-                jCommander.usage(jCommander.getParsedCommand());
-            }
-            System.exit(1);
-        }
+			// Start a master or slave.
+			switch (jCommander.getParsedCommand()) {
+			case "master":
+				startMaster(masterCommand);
+				break;
+			case "slave":
+				startSlave(slaveCommand);
+				break;
+			default:
+				throw new AssertionError();
 
-    }
+			}
 
-    /**
-     * Start a master.
-     *
-     * @param masterCommand defines the parameters of the master
-     */
-    private static void startMaster(MasterCommand masterCommand) throws ParameterException {
-        SchedulingStrategy.Factory schedulingStrategyFactory;
-        switch (masterCommand.schedulingStrategy) {
-            case "round-robin":
-                schedulingStrategyFactory = new RoundRobinSchedulingStrategy.Factory();
-                break;
-            case "reactive":
-                schedulingStrategyFactory = new ReactiveSchedulingStrategy.Factory();
-                break;
-            default:
-                throw new ParameterException(String.format("Unknown scheduling strategy: %s", masterCommand.schedulingStrategy));
-        }
-        Calculator.runMaster(masterCommand.host, masterCommand.port, schedulingStrategyFactory, masterCommand.numLocalWorkers);
-    }
+		} catch (ParameterException e) {
+			System.out.printf("Could not parse args: %s\n", e.getMessage());
+			if (jCommander.getParsedCommand() == null) {
+				jCommander.usage();
+			} else {
+				jCommander.usage(jCommander.getParsedCommand());
+			}
+			System.exit(1);
+		}
 
-    /**
-     * Start a slave.
-     *
-     * @param slaveCommand defines the parameters of the slave
-     */
-    private static void startSlave(SlaveCommand slaveCommand) {
-        Calculator.runSlave(slaveCommand.host, slaveCommand.port, slaveCommand.getMasterHost(), slaveCommand.getMasterPort());
-    }
+	}
 
-    /**
-     * Command to start a master.
-     */
-    @Parameters(commandDescription = "start a master actor system")
-    static class MasterCommand extends CommandBase {
+	/**
+	 * Start a master.
+	 *
+	 * @param masterCommand
+	 *            defines the parameters of the master
+	 */
+	private static void startMaster(MasterCommand masterCommand) throws ParameterException {
+		SchedulingStrategy.Factory schedulingStrategyFactory;
+		switch (masterCommand.schedulingStrategy) {
+		case "round-robin":
+			schedulingStrategyFactory = new RoundRobinSchedulingStrategy.Factory();
+			break;
+		case "reactive":
+			schedulingStrategyFactory = new ReactiveSchedulingStrategy.Factory();
+			break;
+		default:
+			throw new ParameterException(
+					String.format("Unknown scheduling strategy: %s", masterCommand.schedulingStrategy));
+		}
+		Calculator.runMaster(masterCommand.host, masterCommand.port, schedulingStrategyFactory,
+				masterCommand.numLocalWorkers);
+	}
 
-        public static final int DEFAULT_PORT = 7877; // We use twin primes for master and slaves, of course! ;P
+	/**
+	 * Start a slave.
+	 *
+	 * @param slaveCommand
+	 *            defines the parameters of the slave
+	 */
+	private static void startSlave(SlaveCommand slaveCommand) {
+		Calculator.runSlave(slaveCommand.host, slaveCommand.port, slaveCommand.getMasterHost(),
+				slaveCommand.getMasterPort());
+	}
 
-        @Override
-        int getDefaultPort() {
-            return DEFAULT_PORT;
-        }
-        
-        /**
-         * Defines the number of workers that this actor system should spawn.
-         */
-        @Parameter(names = {"-w", "--workers"}, description = "number of workers to start locally")
-        int numLocalWorkers = 4;
+	/**
+	 * Command to start a master.
+	 */
+	@Parameters(commandDescription = "start a master actor system")
+	static class MasterCommand extends CommandBase {
 
-        /**
-         * Defines the scheduling strategy to be used in the master.
-         */
-        @Parameter(names = {"-s", "--scheduler"}, description = "a scheduling strategy (round-robin or reactive)")
-        String schedulingStrategy = "reactive";
-    }
+		public static final int DEFAULT_PORT = 7877; // We use twin primes for master and slaves, of course! ;P
 
-    /**
-     * Command to start a slave.
-     */
-    @Parameters(commandDescription = "start a slave actor system")
-    static class SlaveCommand extends CommandBase {
+		@Override
+		int getDefaultPort() {
+			return DEFAULT_PORT;
+		}
 
-    	public static final int DEFAULT_PORT = 7879; // We use twin primes for master and slaves, of course! ;P
-    	
-        @Override
-        int getDefaultPort() {
-            return DEFAULT_PORT;
-        }
+		/**
+		 * Defines the number of workers that this actor system should spawn.
+		 */
+		@Parameter(names = { "-w", "--workers" }, description = "number of workers to start locally")
+		int numLocalWorkers = 0;
 
-        /**
-         * Defines the address, i.e., host and port of the master actor system.
-         */
-        @Parameter(names = {"-m", "--master"}, description = "host[:port] of the master", required = true)
-        String master;
+		/**
+		 * Defines the scheduling strategy to be used in the master.
+		 */
+		@Parameter(names = { "-s", "--scheduler" }, description = "a scheduling strategy (round-robin or reactive)")
+		String schedulingStrategy = "reactive";
+	}
 
-        String getMasterHost() {
-            int colonIndex = this.master.lastIndexOf(':');
-            if (colonIndex == -1) 
-            	return this.master;
-            return this.master.substring(0, colonIndex);
-        }
+	/**
+	 * Command to start a slave.
+	 */
+	@Parameters(commandDescription = "start a slave actor system")
+	static class SlaveCommand extends CommandBase {
 
-        int getMasterPort() {
-            int colonIndex = this.master.lastIndexOf(':');
-            if (colonIndex == -1) {
-            	return MasterCommand.DEFAULT_PORT;
-            }
-            String portSpec = this.master.substring(colonIndex + 1);
-            try {
-                return Integer.parseInt(portSpec);
-            } catch (NumberFormatException e) {
-                throw new ParameterException(String.format("Illegal port: \"%s\"", portSpec));
-            }
-        }
+		public static final int DEFAULT_PORT = 7879; // We use twin primes for master and slaves, of course! ;P
 
-    }
+		@Override
+		int getDefaultPort() {
+			return DEFAULT_PORT;
+		}
 
-    /**
-     * This class defines shared parameters across masters and slaves.
-     */
-    abstract static class CommandBase {
+		/**
+		 * Defines the address, i.e., host and port of the master actor system.
+		 */
+		@Parameter(names = { "-m", "--master" }, description = "host[:port] of the master", required = true)
+		String master;
 
-        /**
-         * Defines the address that we want to bind the Akka remoting interface to.
-         */
-        @Parameter(names = {"-h", "--host"}, description = "host/IP to bind against")
-        String host = this.getDefaultHost();
+		String getMasterHost() {
+			int colonIndex = this.master.lastIndexOf(':');
+			if (colonIndex == -1)
+				return this.master;
+			return this.master.substring(0, colonIndex);
+		}
 
-        /**
-         * Provide the default host.
-         *
-         * @return the default host
-         */
-        String getDefaultHost() {
-            try {
-                return InetAddress.getLocalHost().getHostAddress();
-            } catch (UnknownHostException e) {
-                return "localhost";
-            }
-        }
+		int getMasterPort() {
+			int colonIndex = this.master.lastIndexOf(':');
+			if (colonIndex == -1) {
+				return MasterCommand.DEFAULT_PORT;
+			}
+			String portSpec = this.master.substring(colonIndex + 1);
+			try {
+				return Integer.parseInt(portSpec);
+			} catch (NumberFormatException e) {
+				throw new ParameterException(String.format("Illegal port: \"%s\"", portSpec));
+			}
+		}
 
-        @Parameter(names = {"-p", "--port"}, description = "port to bind against")
-        int port = this.getDefaultPort();
+	}
 
-        /**
-         * Provide the default port.
-         *
-         * @return the default port
-         */
-        abstract int getDefaultPort();
-    }
+	/**
+	 * This class defines shared parameters across masters and slaves.
+	 */
+	abstract static class CommandBase {
+
+		/**
+		 * Defines the address that we want to bind the Akka remoting interface to.
+		 */
+		@Parameter(names = { "-h", "--host" }, description = "host/IP to bind against")
+		String host = this.getDefaultHost();
+
+		/**
+		 * Provide the default host.
+		 *
+		 * @return the default host
+		 */
+		String getDefaultHost() {
+			try {
+				return InetAddress.getLocalHost().getHostAddress();
+			} catch (UnknownHostException e) {
+				return "localhost";
+			}
+		}
+
+		@Parameter(names = { "-p", "--port" }, description = "port to bind against")
+		int port = this.getDefaultPort();
+
+		/**
+		 * Provide the default port.
+		 *
+		 * @return the default port
+		 */
+		abstract int getDefaultPort();
+	}
 }

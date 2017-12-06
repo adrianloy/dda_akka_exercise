@@ -18,7 +18,7 @@ public class PWReactiveSchedulingStrategy implements PWSchedulingStrategy {
 	/**
 	 * {@link SchedulingStrategy.Factory} implementation for the {@link PWReactiveSchedulingStrategy}.
 	 */
-	public static class Factory implements PWSchedulingStrategy.PWFactory {
+	public static class PWFactory implements PWSchedulingStrategy.PWFactory {
 
 		@Override
 		public PWSchedulingStrategy create(ActorRef master) {
