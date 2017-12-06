@@ -90,7 +90,7 @@ public class PWCrackWorker extends AbstractLoggingActor {
 	private void handle(PWValidationMessage message) {
 		
 		// Log that we started processing the current task
-		this.log().info("Brute force values [start range, end range, hash]: [{},{}] ...", message.rangeMin, message.rangeMax, message.pwhash);
+		this.log().info("Brute force values [start range, end range, hash]: [{},{}] ...", message.rangeMin, message.rangeMax);
 
 		// Iterate over the range of numbers and check if we cracked the hash
 		for (int i = message.rangeMin; i <= message.rangeMax; i++) {
@@ -127,7 +127,7 @@ public class PWCrackWorker extends AbstractLoggingActor {
 		}
 		try {
 			String pw2_hash = String.format("%064x", new java.math.BigInteger(1, java.security.MessageDigest.getInstance("SHA-256").digest(pw2.getBytes("UTF-8"))));
-
+			
 			return pw2_hash.equals(pwhash);
 		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block

@@ -56,7 +56,7 @@ public class PWMaster extends AbstractLoggingActor {
 		 * @param startNumber first number in the range to be checked as prime (inclusive)
 		 * @param endNumber last number in the range to be checked as prime (inclusive)
 		 */
-		public PWHashMessage(final String pwhash, final String username) {
+		public PWHashMessage(final String username, final String pwhash) {
 			//this.startNumber = startNumber;
 			//this.endNumber = endNumber;
 			this.pwhash = pwhash;
