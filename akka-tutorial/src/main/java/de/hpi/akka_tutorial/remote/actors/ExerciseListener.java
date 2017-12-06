@@ -104,10 +104,11 @@ public class ExerciseListener extends AbstractLoggingActor {
 		Iterator<Map.Entry<String, String>> it = this.pw_map.entrySet().iterator();
 		while (it.hasNext()) {
 			Map.Entry<String, String> pair = (Map.Entry<String, String>)it.next();
-			str_out += pair.getKey() + "," + pair.getValue() + "/n";
+			str_out += pair.getKey() + "," + pair.getValue() + "\n";
 		}
 		try(  PrintWriter out = new PrintWriter(ExerciseListener.output_filepath)  ){
 		    out.println(str_out);
+		    System.out.println("Wrote file with passwords to: " + ExerciseListener.output_filepath);
 		} catch (FileNotFoundException e) {
 			System.out.println("Could not write file to " + ExerciseListener.output_filepath);
 			e.printStackTrace();
