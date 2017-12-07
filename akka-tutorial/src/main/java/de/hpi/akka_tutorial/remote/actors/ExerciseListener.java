@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import akka.actor.AbstractLoggingActor;
 import akka.actor.PoisonPill;
 import akka.actor.Props;
+import de.hpi.akka_tutorial.Participant;
 import de.hpi.akka_tutorial.remote.messages.ShutdownMessage;
 
 /**
@@ -63,7 +64,27 @@ public class ExerciseListener extends AbstractLoggingActor {
 		private PWListenerMessage() {
 		}
 	}
-	
+	public static class SSListenerMessage implements Serializable {
+
+		private static final long serialVersionUID = -1779142448826930939L;
+
+		private Participant p1;
+		private Participant p2;
+
+		public SSListenerMessage(final Participant p1, final Participant p2) {
+			this.p1 = p1;
+			this.p2 = p2;
+		}
+
+		/**
+		 * For serialization/deserialization only.
+		 */
+		@SuppressWarnings("unused")
+		private SSListenerMessage() {
+		}
+	}
+
+
 	// The set of all users and passwords received by this listener actor
 	private final Map<String, String> pw_map = new HashMap<String, String>();
 	

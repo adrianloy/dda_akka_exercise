@@ -15,6 +15,7 @@ import de.hpi.akka_tutorial.remote.messages.ShutdownMessage;
 import de.hpi.akka_tutorial.Participant;
 import de.hpi.akka_tutorial.remote.actors.ExerciseListener;
 import de.hpi.akka_tutorial.remote.actors.PWMaster;
+import de.hpi.akka_tutorial.remote.actors.SSMaster;
 import de.hpi.akka_tutorial.remote.actors.Reaper;
 import de.hpi.akka_tutorial.remote.actors.Shepherd;
 import de.hpi.akka_tutorial.remote.actors.Slave;
@@ -27,22 +28,24 @@ public class PWCalculator {
 	private static final String DEFAULT_MASTER_SYSTEM_NAME = "MasterActorSystem";
 	private static final String DEFAULT_SLAVE_SYSTEM_NAME = "SlaveActorSystem";
 
-	private static void shutdown(final ActorRef shepherd, final ActorRef master) {
+	private static void shutdown(final ActorRef shepherd, final ActorRef master1, final ActorRef master2) {
 		
 		// Tell the master that we will not send any further requests and want to shutdown the system after all current jobs finished
-		master.tell(new ShutdownMessage(), ActorRef.noSender());
+		master1.tell(new ShutdownMessage(), ActorRef.noSender());
+		master2.tell(new ShutdownMessage(), ActorRef.noSender());
 		
 		// Do not accept any new subscriptions
 		shepherd.tell(new ShutdownMessage(), ActorRef.noSender());
 	}
 	
-	private static void kill(final ActorRef listener, final ActorRef master, final ActorRef shepherd) {
+	private static void kill(final ActorRef listener, final ActorRef master1, final ActorRef master2, final ActorRef shepherd) {
 		
 		// End the listener
 		listener.tell(PoisonPill.getInstance(), ActorRef.noSender());
 
-		// End the master
-		master.tell(PoisonPill.getInstance(), ActorRef.noSender());
+		// End the masters
+		master1.tell(PoisonPill.getInstance(), ActorRef.noSender());
+		master2.tell(PoisonPill.getInstance(), ActorRef.noSender());
 		
 		// End the shepherd
 		shepherd.tell(PoisonPill.getInstance(), ActorRef.noSender()); 
@@ -78,7 +81,7 @@ public class PWCalculator {
 	}
 
 	public static void runMaster(String host, int port, PWFactory schedulingStrategyFactory, int numLocalWorkers, HashSet<Participant> all_participants) {
-		
+
 		// Create the ActorSystem
 		final Config config = AkkaUtils.createRemoteAkkaConfig(host, port);
 		final ActorSystem actorSystem = ActorSystem.create(DEFAULT_MASTER_SYSTEM_NAME, config);
@@ -89,19 +92,27 @@ public class PWCalculator {
 		// Create the Listener
 		final ActorRef listener = actorSystem.actorOf(ExerciseListener.props(), ExerciseListener.DEFAULT_NAME);
 
-		// Create the Master
-		final ActorRef master = actorSystem.actorOf(PWMaster.props(listener, schedulingStrategyFactory, numLocalWorkers), PWMaster.DEFAULT_NAME);
+		// Create the Masters
+		final ActorRef pwmaster = actorSystem.actorOf(PWMaster.props(listener, schedulingStrategyFactory, numLocalWorkers), PWMaster.DEFAULT_NAME);
+		final ActorRef ssmaster = actorSystem.actorOf(PWMaster.props(listener, schedulingStrategyFactory, numLocalWorkers), SSMaster.DEFAULT_NAME);
 
 		// Create the Shepherd
-		final ActorRef shepherd = actorSystem.actorOf(Shepherd.props(master), Shepherd.DEFAULT_NAME);
-		
+		final ActorRef shepherd = actorSystem.actorOf(Shepherd.props(pwmaster), Shepherd.DEFAULT_NAME);
+
 		// Schedule all pw cracking jobs
 		for (Participant p : all_participants) {
-			master.tell(new PWMaster.PWHashMessage(p.getName(), p.getPwhash()), ActorRef.noSender());
+			pwmaster.tell(new PWMaster.PWHashMessage(p.getName(), p.getPwhash()), ActorRef.noSender());
+		}
+
+		// schedule all substring matching jobs, reducing combinations to a minimum
+		for (int i = 0; i < all_participants.size(); ++i) {
+			for (int j = all_participants.size()-1; j > i; --j) {
+				ssmaster.tell(new SSMaster.CompareMessage(all_participants[i], all_participants[j]), ActorRef.noSender());
+			}
 		}
 		
-		PWCalculator.enterInteractiveLoop(listener, master, shepherd);
-		PWCalculator.shutdown(shepherd, master);
+		PWCalculator.enterInteractiveLoop(listener, pwmaster, shepherd);
+		PWCalculator.shutdown(shepherd, pwmaster);
 		
 		System.out.println("Stopping...");
 
@@ -110,7 +121,7 @@ public class PWCalculator {
 		
 	}
 	
-	private static void enterInteractiveLoop(final ActorRef listener, final ActorRef master, final ActorRef shepherd) {
+	private static void enterInteractiveLoop(final ActorRef listener, final ActorRef master1, final ActorRef master2, final ActorRef shepherd) {
 		
 		// Read ranges from the console and process them
 		final Scanner scanner = new Scanner(System.in);
@@ -129,11 +140,11 @@ public class PWCalculator {
 
 			switch (line) {
 				case "exit":
-					PWCalculator.shutdown(shepherd, master);
+					PWCalculator.shutdown(shepherd, master1, master2);
 					scanner.close();
 					return;
 				case "kill":
-					PWCalculator.kill(listener, master, shepherd);
+					PWCalculator.kill(listener, master1, master2, shepherd);
 					scanner.close();
 					return;
 				default:
