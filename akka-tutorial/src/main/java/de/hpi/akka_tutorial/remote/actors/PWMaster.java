@@ -222,27 +222,12 @@ public class PWMaster extends AbstractLoggingActor {
 	@Override
 	public Receive createReceive() {
 		return receiveBuilder()
-				.match(RemoteSystemMessage.class, this::handle)
 				.match(PWHashMessage.class, this::handle)
 				.match(PWMessage.class, this::handle)
 				.match(ShutdownMessage.class, this::handle)
 				.match(Terminated.class, this::handle)
 				.matchAny(object -> this.log().info(this.getClass().getName() + " received unknown message: " + object.toString()))
 				.build();
-	}
-
-	private void handle(RemoteSystemMessage message) {
-
-		// Create a new worker with the given URI
-		ActorRef worker = this.getContext().actorOf(Worker.props().withDeploy(new Deploy(new RemoteScope(message.remoteAddress))));
-		
-		// Add worker to the scheduler
-		this.schedulingStrategy.addWorker(worker);
-
-		// Add the worker to the watch list
-		this.getContext().watch(worker);
-
-		this.log().info("New worker: " + worker);
 	}
 	
 	private void handle(PWMessage message) {
