@@ -101,7 +101,7 @@ public class Shepherd extends AbstractLoggingActor {
 		Address remoteAddress = this.getSender().path().address();
 
 		// Inform the master about the new remote system.
-		this.master.tell(new Master.RemoteSystemMessage(remoteAddress), this.getSelf());
+		this.master.tell(new PWMaster.RemoteSystemMessage(remoteAddress), this.getSelf());
 	}
 	
 	private void handle(ShutdownMessage message) {
