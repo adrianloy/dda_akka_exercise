@@ -31,6 +31,8 @@ public class SSWorker extends AbstractLoggingActor {
 		
 		private static final long serialVersionUID = -7467053227355130231L;
 		
+		private int id;
+		
 		private Participant p1;
 		
 		private Participant p2;
@@ -42,7 +44,8 @@ public class SSWorker extends AbstractLoggingActor {
 		 * @param rangeMin first number in the range to be checked as password (inclusive)
 		 * @param rangeMax last number in the range to be checked as password (inclusive)
 		 */
-		public SSValidationMessage(Participant p1, Participant p2) {
+		public SSValidationMessage(int id, Participant p1, Participant p2) {
+			this.id = id;
 			this.p1 = p1;
 			this.p2 = p2;
 		}
