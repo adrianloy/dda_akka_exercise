@@ -20,6 +20,7 @@ public class Participant implements Serializable{
 		this.name = name;
 		this.pwhash = pwhash;
 		this.dna = dna;
+		this.dna_match_partner_id = -1;
 	}
 
 
