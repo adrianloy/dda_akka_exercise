@@ -4,10 +4,14 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedList;
+
 import de.hpi.akka_tutorial.Participant;
 import de.hpi.akka_tutorial.remote.PWCalculator;
 import de.hpi.akka_tutorial.remote.actors.scheduling.PWReactiveSchedulingStrategy;
+import de.hpi.akka_tutorial.remote.actors.scheduling.SSReactiveSchedulingStrategy;
 
 public class ExerciseMain {
 
@@ -24,7 +28,7 @@ public class ExerciseMain {
 		BufferedReader br = null;
 		String line = "";
 		String cvsSplitBy = ",";
-		HashSet<Participant> all_participants = new HashSet<Participant>();
+		ArrayList<Participant> all_participants = new ArrayList<Participant>();
 		try {
 
 			br = new BufferedReader(new FileReader(csvFile));
@@ -58,7 +62,7 @@ public class ExerciseMain {
 		// Calculator.runMaster(masterCommand.host, masterCommand.port,
 		// schedulingStrategyFactory, masterCommand.numLocalWorkers);
 		System.out.println("Found " + all_participants.size() + " students in students.csv");
-		PWCalculator.runMaster("localhost", 7877, new PWReactiveSchedulingStrategy.PWFactory(), 4, all_participants);
+		PWCalculator.runMaster("localhost", 7877, new PWReactiveSchedulingStrategy.PWFactory(), new SSReactiveSchedulingStrategy.SSFactory(), 4, all_participants);
 
 	}
 }

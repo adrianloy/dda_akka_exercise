@@ -2,7 +2,10 @@ package de.hpi.akka_tutorial;
 
 import java.io.Serializable;
 
-public class Participant implements Serializable{
+import org.junit.runner.manipulation.Sortable;
+import org.junit.runner.manipulation.Sorter;
+
+public class Participant implements Serializable, Comparable<Participant>{
 	private static final long serialVersionUID = -123272840353304769L;
 
 	private int id; 
@@ -88,6 +91,16 @@ public class Participant implements Serializable{
 
 	@Override
 	public String toString() {
-		return String.format("%s[%,d..%,d]", this.getClass().getSimpleName(), this.id, this.name);
+		return this.getId() + "," + 
+				this.getName() + 
+				"," + this.getPw_clear() + 
+				"," + this.dna_match_partner_id + 
+				"," + this.dna_match + "\n";
 	}
+
+
+	@Override
+	public int compareTo(Participant o) {
+		return o.getDna_match().length()-this.getDna_match().length();	}
+
 }

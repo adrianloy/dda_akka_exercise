@@ -1,7 +1,6 @@
 package de.hpi.akka_tutorial.remote.actors.scheduling;
 
 import akka.actor.ActorRef;
-import de.hpi.akka_tutorial.remote.actors.Worker;
 import de.hpi.akka_tutorial.Participant;
 
 public interface SSSchedulingStrategy {

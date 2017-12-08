@@ -1,5 +1,6 @@
 package de.hpi.akka_tutorial.remote;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Scanner;
 import java.util.concurrent.TimeoutException;
@@ -11,6 +12,7 @@ import akka.actor.ActorSystem;
 import akka.actor.Address;
 import akka.actor.PoisonPill;
 import de.hpi.akka_tutorial.remote.actors.scheduling.PWReactiveSchedulingStrategy.PWFactory;
+import de.hpi.akka_tutorial.remote.actors.scheduling.SSReactiveSchedulingStrategy.SSFactory;
 import de.hpi.akka_tutorial.remote.messages.ShutdownMessage;
 import de.hpi.akka_tutorial.Participant;
 import de.hpi.akka_tutorial.remote.actors.ExerciseListener;
@@ -80,7 +82,7 @@ public class PWCalculator {
 		PWCalculator.awaitTermination(actorSystem);
 	}
 
-	public static void runMaster(String host, int port, PWFactory schedulingStrategyFactory, int numLocalWorkers, HashSet<Participant> all_participants) {
+	public static void runMaster(String host, int port, PWFactory schedulingStrategyFactory, SSFactory ssfac, int numLocalWorkers, ArrayList<Participant> all_participants) {
 
 		// Create the ActorSystem
 		final Config config = AkkaUtils.createRemoteAkkaConfig(host, port);
@@ -94,25 +96,27 @@ public class PWCalculator {
 
 		// Create the Masters
 		final ActorRef pwmaster = actorSystem.actorOf(PWMaster.props(listener, schedulingStrategyFactory, numLocalWorkers), PWMaster.DEFAULT_NAME);
-		final ActorRef ssmaster = actorSystem.actorOf(PWMaster.props(listener, schedulingStrategyFactory, numLocalWorkers), SSMaster.DEFAULT_NAME);
+		final ActorRef ssmaster = actorSystem.actorOf(SSMaster.props(listener, ssfac, numLocalWorkers), SSMaster.DEFAULT_NAME);
 
 		// Create the Shepherd
 		final ActorRef shepherd = actorSystem.actorOf(Shepherd.props(pwmaster), Shepherd.DEFAULT_NAME);
 
 		// Schedule all pw cracking jobs
-		for (Participant p : all_participants) {
-			pwmaster.tell(new PWMaster.PWHashMessage(p.getName(), p.getPwhash()), ActorRef.noSender());
-		}
+		//for (Participant p : all_participants) {
+			//pwmaster.tell(new PWMaster.PWHashMessage(p.getName(), p.getPwhash()), ActorRef.noSender());
+		//}
 
 		// schedule all substring matching jobs, reducing combinations to a minimum
-		for (int i = 0; i < all_participants.size(); ++i) {
-			for (int j = all_participants.size()-1; j > i; --j) {
-				ssmaster.tell(new SSMaster.CompareMessage(all_participants[i], all_participants[j]), ActorRef.noSender());
+		ssmaster.tell(new SSMaster.CompareMessage(all_participants.get(1), all_participants.get(7)), ActorRef.noSender());
+
+		/*for (int i = 0; i < 1; ++i) { // TODO: change
+			for (int j = i+1;  j < all_participants.size(); ++j) {
+				ssmaster.tell(new SSMaster.CompareMessage(all_participants.get(i), all_participants.get(j)), ActorRef.noSender());
 			}
-		}
+		}*/
 		
-		PWCalculator.enterInteractiveLoop(listener, pwmaster, shepherd);
-		PWCalculator.shutdown(shepherd, pwmaster);
+		PWCalculator.enterInteractiveLoop(listener, pwmaster, ssmaster, shepherd);
+		PWCalculator.shutdown(shepherd, pwmaster, ssmaster);
 		
 		System.out.println("Stopping...");
 

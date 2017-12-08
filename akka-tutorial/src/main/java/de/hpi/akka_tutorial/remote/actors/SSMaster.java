@@ -108,7 +108,7 @@ public class SSMaster extends AbstractLoggingActor {
 	private final ActorRef listener;
 
 	// The scheduling strategy that splits range messages into smaller tasks and distributes these to the workers
-	private final PWSchedulingStrategy schedulingStrategy;
+	private final SSSchedulingStrategy schedulingStrategy;
 
 	// A helper variable to assign unique IDs to each range query
 	private int nextQueryId = 0;
@@ -123,7 +123,7 @@ public class SSMaster extends AbstractLoggingActor {
 	 * @param schedulingStrategyFactory defines which {@link SchedulingStrategy} to use
 	 * @param numLocalWorkers number of workers that this master should start locally
 	 */
-	public SSMaster(final ActorRef listener, PWSchedulingStrategy.PWFactory schedulingStrategyFactory, int numLocalWorkers) {
+	public SSMaster(final ActorRef listener, SSSchedulingStrategy.Factory schedulingStrategyFactory, int numLocalWorkers) {
 		
 		// Save the reference to the Listener actor
 		this.listener = listener;
@@ -135,7 +135,7 @@ public class SSMaster extends AbstractLoggingActor {
 		for (int i = 0; i < numLocalWorkers; i++) {
 			
 			// Create a new worker
-			ActorRef worker = this.getContext().actorOf(PWCrackWorker.props());
+			ActorRef worker = this.getContext().actorOf(SSWorker.props());
 			this.schedulingStrategy.addWorker(worker);
 
 			// Add the worker to the watch list and our router
@@ -182,7 +182,7 @@ public class SSMaster extends AbstractLoggingActor {
 	private void handle(RemoteSystemMessage message) {
 
 		// Create a new worker with the given URI
-		ActorRef worker = this.getContext().actorOf(Worker.props().withDeploy(new Deploy(new RemoteScope(message.remoteAddress))));
+		ActorRef worker = this.getContext().actorOf(SSWorker.props().withDeploy(new Deploy(new RemoteScope(message.remoteAddress))));
 		
 		// Add worker to the scheduler
 		this.schedulingStrategy.addWorker(worker);
@@ -195,7 +195,7 @@ public class SSMaster extends AbstractLoggingActor {
 	
 	private void handle(FinalizedMessage message) {
 		// If the worker found the password tell the listener
-		if (message.participant1.getId() > -1) {
+		if (message.participant1.getDna_match_partner_id() > -1) {
 			// Forward the cracked password to the listener
 			this.listener.tell(new ExerciseListener.SSListenerMessage(message.participant1, message.participant2), this.getSelf());
 		}
@@ -217,7 +217,7 @@ public class SSMaster extends AbstractLoggingActor {
 		}
 
 		// Schedule the request
-		this.schedulingStrategy.schedule(this.nextQueryId, message.participant1, message.participant1);
+		this.schedulingStrategy.schedule(this.nextQueryId, message.participant1, message.participant2);
 		this.nextQueryId++;
 	}
 

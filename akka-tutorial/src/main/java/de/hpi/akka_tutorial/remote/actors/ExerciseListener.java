@@ -87,6 +87,7 @@ public class ExerciseListener extends AbstractLoggingActor {
 
 	// The set of all users and passwords received by this listener actor
 	private final Map<String, String> pw_map = new HashMap<String, String>();
+	private final Map<Integer, Participant> participant_list = new HashMap<Integer, Participant>();
 	
 	@Override
 	public void preStart() throws Exception {
@@ -110,6 +111,7 @@ public class ExerciseListener extends AbstractLoggingActor {
 		return receiveBuilder()
 				.match(PWListenerMessage.class, this::handle)
 				.match(ShutdownMessage.class, this::handle)
+				.match(SSListenerMessage.class, this::handle)
 				.matchAny(object -> this.log().info(this.getClass().getName() + " received unknown message: " + object.toString()))
 				.build();
 	}
@@ -118,8 +120,30 @@ public class ExerciseListener extends AbstractLoggingActor {
 		System.out.println("WE FOUND A PASSWORD FUUUUCK YEAH!!11");
 		this.pw_map.put(message.user, message.password);
 	}
+	private void refreshParticipant(Participant p1) {
+		Participant p2 = this.participant_list.get(p1.getId());
+		if (p2.getDna_match().length() < p1.getDna_match().length()) {
+			p2.setDna_match(p1.getDna_match());
+			p2.setDna_match_partner_id(p1.getId());
+		}
+	}
+	private void handle(SSListenerMessage message) {
+		System.out.println("o/");
+		if (this.participant_list.containsKey(message.p1.getId())){
+			this.refreshParticipant(message.p1);
+		}
+		else {
+			this.participant_list.put(message.p1.getId(), message.p1);
+		}
+		if (this.participant_list.containsKey(message.p2.getId())){
+			this.refreshParticipant(message.p2);
+		}
+		else {
+			this.participant_list.put(message.p2.getId(), message.p2);
+		}
+	}
 	
-	private void handle(ShutdownMessage message) {
+	private void handle_old(ShutdownMessage message) {
 		// Write all found passwords to disk
 		String str_out = "";
 		Iterator<Map.Entry<String, String>> it = this.pw_map.entrySet().iterator();
@@ -130,6 +154,22 @@ public class ExerciseListener extends AbstractLoggingActor {
 		try(  PrintWriter out = new PrintWriter(ExerciseListener.output_filepath)  ){
 		    out.println(str_out);
 		    System.out.println("Wrote file with passwords to: " + ExerciseListener.output_filepath);
+		} catch (FileNotFoundException e) {
+			System.out.println("Could not write file to " + ExerciseListener.output_filepath);
+			e.printStackTrace();
+		}
+		this.getSelf().tell(PoisonPill.getInstance(), this.getSelf());
+	}	
+	
+	private void handle(ShutdownMessage message) {
+		// Write all found participants with their information to the disk
+		String str_out = "";
+		for(Participant p : this.participant_list.values()) {
+			str_out += p.toString();			
+		}
+		try(  PrintWriter out = new PrintWriter(ExerciseListener.output_filepath)  ){
+		    out.println(str_out);
+		    System.out.println("Wrote file to: " + ExerciseListener.output_filepath);
 		} catch (FileNotFoundException e) {
 			System.out.println("Could not write file to " + ExerciseListener.output_filepath);
 			e.printStackTrace();

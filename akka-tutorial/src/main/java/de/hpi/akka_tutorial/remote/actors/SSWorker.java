@@ -88,19 +88,13 @@ public class SSWorker extends AbstractLoggingActor {
 		this.log().info("Start searching for the longest common substring between [{},{}]", message.p1.getName(), message.p2.getName());
 
 		String ss = getLongestCommonSubstring(message.p1.getDna(), message.p2.getDna());
-		//this.getSender().tell(new PWMaster.PWMessage(message.id, i, message.user), this.getSelf());
-		
-		// Asynchronous version: Consider using a dedicated executor service.
-//		ActorRef sender = this.getSender();
-//		ActorRef self = this.getSelf();
-//		getContext().getSystem().dispatcher().execute(() -> {
-//			final List<Object> result = new ArrayList<>();
-//			for (Long number : message.getNumbers())
-//				if (this.isPrime(number.longValue()))
-//					result.add(number);
-//
-//			sender.tell(new Master.ObjectMessage(message.getId(), result), self);
-//		});
+		Participant p1 = message.p1;
+		Participant p2 = message.p2;
+		p1.setDna_match_partner_id(p2.getId());
+		p2.setDna_match_partner_id(p1.getId());
+		p1.setDna_match(ss);
+		p2.setDna_match(ss);
+		this.getSender().tell(new SSMaster.FinalizedMessage(p1, p2), this.getSelf());
 	}
 	
 	/**
@@ -117,7 +111,7 @@ public class SSWorker extends AbstractLoggingActor {
 		int[] max_pos = new int[2];
 		for (int i=1; i < D.length;i++) {
 			for (int k=1; k<D[0].length;k++) {
-				if (a.charAt(i) == (b.charAt(k))){
+				if (a.charAt(i-1) == (b.charAt(k-1))){
 					D[i][k] = D[i-1][k-1] + 1;
 				}
 				else {
