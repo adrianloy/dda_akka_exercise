@@ -125,10 +125,11 @@ public class ExerciseListener extends AbstractLoggingActor {
 		if (p2.getDna_match().length() < p1.getDna_match().length()) {
 			p2.setDna_match(p1.getDna_match());
 			p2.setDna_match_partner_id(p1.getId());
+			System.out.println(String.format("New longest gene partner for %d: %d with sequence %s", p1.getId(), p2.getId(), p1.getDna_match()));
 		}
 	}
 	private void handle(SSListenerMessage message) {
-		System.out.println("o/");
+		//System.out.println("o/");
 		if (this.participant_list.containsKey(message.p1.getId())){
 			this.refreshParticipant(message.p1);
 		}

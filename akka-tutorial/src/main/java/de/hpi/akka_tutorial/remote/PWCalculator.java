@@ -107,13 +107,11 @@ public class PWCalculator {
 		//}
 
 		// schedule all substring matching jobs, reducing combinations to a minimum
-		ssmaster.tell(new SSMaster.CompareMessage(all_participants.get(1), all_participants.get(7)), ActorRef.noSender());
-
-		/*for (int i = 0; i < 1; ++i) { // TODO: change
-			for (int j = i+1;  j < all_participants.size(); ++j) {
-				ssmaster.tell(new SSMaster.CompareMessage(all_participants.get(i), all_participants.get(j)), ActorRef.noSender());
-			}
-		}*/
+		for (int i = 0; i < 1; ++i) { // TODO: change
+			//for (int j = i+1;  j < all_participants.size(); ++j) {
+				ssmaster.tell(new SSMaster.CompareMessage(all_participants.get(i), all_participants.get(1)), ActorRef.noSender());
+			//}
+		}
 		
 		PWCalculator.enterInteractiveLoop(listener, pwmaster, ssmaster, shepherd);
 		PWCalculator.shutdown(shepherd, pwmaster, ssmaster);

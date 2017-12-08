@@ -2,9 +2,6 @@ package de.hpi.akka_tutorial;
 
 import java.io.Serializable;
 
-import org.junit.runner.manipulation.Sortable;
-import org.junit.runner.manipulation.Sorter;
-
 public class Participant implements Serializable, Comparable<Participant>{
 	private static final long serialVersionUID = -123272840353304769L;
 
