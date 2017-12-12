@@ -3,6 +3,7 @@ package de.hpi.akka_tutorial.remote.actors.scheduling;
 import akka.actor.ActorRef;
 import de.hpi.akka_tutorial.remote.actors.scheduling.SSSchedulingStrategy;
 import de.hpi.akka_tutorial.remote.actors.SSWorker;
+import de.hpi.akka_tutorial.remote.actors.SSWorker.SSValidationMessage;
 import de.hpi.akka_tutorial.Participant;
 
 import java.util.*;
@@ -22,24 +23,28 @@ public class SSReactiveSchedulingStrategy implements SSSchedulingStrategy {
 	}
 
 	/**
-	 * This class supervises the state of a range query for password cracking.
+	 * This class supervises the state of a query to find the longest ss of two participants.
 	 */
 	private class QueryTracker {
-
-		// Give each worker at most this many numbers at once to check.
-		private final int MAX_SUBQUERY_RANGE_SIZE = 100_000;
-
-		// The range of values that was not yet scheduled to workers.
-		private int remainingRangeStartNumber, remainingRangeEndNumber;
 
 		// This is the ID of the query that is being tracked.
 		private final int id;
 
+		
+		// keeps track of the actor processing our query
+		private ActorRef myworker;
+		
+		// Keeps track if the query failed to reschedule it
+		private boolean failed = true;
+		
+		//keep track if we are done
+		private boolean finito = false;
+		
 		// Keeps track of the currently posed subqueries and which actor is processing it.
-		private final Map<ActorRef, SSWorker.SSValidationMessage> runningSubqueries = new HashMap<>();
+		//private final Map<ActorRef, SSWorker.SSValidationMessage> runningSubqueries = new HashMap<>();
 
 		// Keeps track of failed subqueries, so as to reschedule them to some worker.
-		private final Queue<SSWorker.SSValidationMessage> failedSubqueries = new LinkedList<>();
+		//private final Queue<SSWorker.SSValidationMessage> failedSubqueries = new LinkedList<>();
 
 		private Participant p1;
 		private Participant p2;
@@ -48,15 +53,32 @@ public class SSReactiveSchedulingStrategy implements SSSchedulingStrategy {
 			this.id = id;
 			this.p1 = p1;
 			this.p2 = p2;
+			this.failed = false;
+			this.finito = false;
+			this.myworker = null;
 		}
 
 		/**
-		 * Assign a subquery of the tracked query to the worker. If a subquery was available, a {@link SSWorker.SSValidationMessage} is send to the worker with master as sender.
+		 * Assign a query of the tracked query to the worker. If a subquery was available, a {@link SSWorker.SSValidationMessage} is send to the worker with master as sender.
 		 *
 		 * @return a new subquery or {@code null}
 		 */
 		boolean assignWork(ActorRef worker, ActorRef master) {
-
+			System.out.println("try to  assign work to query with id " + this.id);
+			// we can only assign work to a worker if we dont already have a worker that is doing the job
+			if (this.myworker != null) {
+				System.out.println("  na im busy. cant assign");
+				return false;
+			}
+			else {
+				System.out.println("  did it");
+				SSValidationMessage query = new SSWorker.SSValidationMessage(this.id, this.p1, this.p2);
+				worker.tell(query, master);
+				this.myworker = worker;
+				this.failed = false;
+				return true;
+			}			
+			/**
 			// Select a failed subquery if any
 			SSWorker.SSValidationMessage subquery = this.failedSubqueries.poll();
 
@@ -64,9 +86,8 @@ public class SSReactiveSchedulingStrategy implements SSSchedulingStrategy {
 			if (subquery == null) {
 				subquery = new SSWorker.SSValidationMessage(this.id, this.p1, this.p2);
 			}
-
+			else {
 			// Return false if no work was assigned
-			if (subquery == null) {
 				return false;
 			}
 
@@ -75,18 +96,17 @@ public class SSReactiveSchedulingStrategy implements SSSchedulingStrategy {
 			this.runningSubqueries.put(worker, subquery);
 
 			return true;
+			**/
 		}
 
 		/**
-		 * Handle the failure of a subquery. That is, prepare to re-schedule the failed subquery.
+		 * Handle the failure of this query. That is, prepare to re-schedule the failed subquery.
 		 *
 		 * @param worker the actor that just failed
 		 */
 		void workFailed(ActorRef worker) {
-			SSWorker.SSValidationMessage failedTask = this.runningSubqueries.remove(worker);
-			if (failedTask != null) {
-				this.failedSubqueries.add(failedTask);
-			}
+			this.failed = true;
+			this.myworker = null;
 		}
 
 		/**
@@ -95,19 +115,11 @@ public class SSReactiveSchedulingStrategy implements SSSchedulingStrategy {
 		 * @param worker the actor that just completed
 		 */
 		void workCompleted(ActorRef worker) {
-			SSWorker.SSValidationMessage completedTask = this.runningSubqueries.remove(worker);
-			assert completedTask != null;
+			this.finito = true;
 		}
 
-		/**
-		 * Check whether this query is complete, i.e., there are no more open or running subqueries.
-		 *
-		 * @return whether this query is complete
-		 */
-		boolean isComplete() {
-			return this.runningSubqueries.isEmpty()
-					&& this.failedSubqueries.isEmpty()
-					&& this.remainingRangeStartNumber > this.remainingRangeEndNumber;
+		public boolean isComplete() {
+			return this.finito && ! this.failed;
 		}
 	}
 
@@ -131,9 +143,9 @@ public class SSReactiveSchedulingStrategy implements SSSchedulingStrategy {
 		// Create a new tracker for the query
 		QueryTracker tracker = new QueryTracker(taskId, p1, p2);
 		this.queryId2tracker.put(tracker.id, tracker);
-
+		System.out.println("schedule job with trackerid " + taskId);
 		// Assign existing, possible free, workers to the new query
-		this.assignSubqueries();
+		this.assignQueries();
 	}
 
 	@Override
@@ -143,21 +155,25 @@ public class SSReactiveSchedulingStrategy implements SSSchedulingStrategy {
 
 	@Override
 	public void finished(final int taskId, final ActorRef worker) {
-		
+
+		System.out.println("TASK IS finished: " + taskId + " ");
 		// Find the query being processed
 		QueryTracker queryTracker = this.queryId2tracker.get(taskId);
-
-		// Mark the worker as free
+		
+		// mark query as free
 		queryTracker.workCompleted(worker);
+		// Mark the worker as free
 		this.worker2tracker.put(worker, null);
 
 		// Check if the query is complete
 		if (queryTracker.isComplete()) {
 			// Remove the query tracker
 			this.queryId2tracker.remove(queryTracker.id);
+			System.out.println("REMOVE TASK FROM TRACKER");
 		} else {
 			// Re-assign the now free worker
-			this.assignSubqueries();
+			System.out.println("Work aint done " + queryTracker.id + " ");
+			this.assignQueries();
 		}
 	}
 
@@ -168,7 +184,7 @@ public class SSReactiveSchedulingStrategy implements SSSchedulingStrategy {
 		this.worker2tracker.put(worker, null);
 
 		// Assign possibly open subqueries to the new worker
-		this.assignSubqueries();
+		this.assignQueries();
 	}
 
 	@Override
@@ -177,16 +193,16 @@ public class SSReactiveSchedulingStrategy implements SSSchedulingStrategy {
 		// Remove the worker from the list of workers
 		QueryTracker processedTracker = this.worker2tracker.remove(worker);
 
-		// If the worker was processing some subquery, then we need to re-schedule this subquery
+		// If the worker was processing some query, then we need to re-schedule this query
 		if (processedTracker != null) {
 			processedTracker.workFailed(worker);
 
 			// We might have some free workers that could process the re-scheduled subquery
-			this.assignSubqueries();
+			this.assignQueries();
 		}
 	}
 
-	private void assignSubqueries() {
+	private void assignQueries() {
 
 		// Collect all currently idle workers
 		Collection<ActorRef> idleWorkers = this.worker2tracker.entrySet().stream()
@@ -194,12 +210,12 @@ public class SSReactiveSchedulingStrategy implements SSSchedulingStrategy {
 				.map(Map.Entry::getKey)
 				.collect(Collectors.toList());
 		
-		// Assign idle workers to subqueries as long as there is work to do
+		// Assign idle workers to queries as long as there is work to do
 		Iterator<QueryTracker> queryTrackerIterator = this.queryId2tracker.values().iterator();
 		for (ActorRef idleWorker : idleWorkers) {
 			QueryTracker queryTracker;
 			
-			// Find a query tracker that can assign a subquery to this idle worker
+			// Find a query tracker that can assign a query to this idle worker
 			do {
 				// Check if there is any (further) on-going query
 				if (!queryTrackerIterator.hasNext()) 
@@ -210,7 +226,7 @@ public class SSReactiveSchedulingStrategy implements SSSchedulingStrategy {
 			}
 			while (!queryTracker.assignWork(idleWorker, this.master));
 
-			// Assign the subquery to the worker and keep track of the assignment
+			// Assign the query to the worker and keep track of the assignment
 			this.worker2tracker.put(idleWorker, queryTracker);
 		}
 	}

@@ -108,9 +108,10 @@ public class PWCalculator {
 
 		// schedule all substring matching jobs, reducing combinations to a minimum
 		for (int i = 0; i < 1; ++i) { // TODO: change
-			//for (int j = i+1;  j < all_participants.size(); ++j) {
-				ssmaster.tell(new SSMaster.CompareMessage(all_participants.get(i), all_participants.get(1)), ActorRef.noSender());
-			//}
+			for (int j = i+1;  j < all_participants.size(); ++j) {
+				//System.out.println("Schedule job: " + all_participants.get(i).getName() + " " +  all_participants.get(j).getName());
+				ssmaster.tell(new SSMaster.CompareMessage(all_participants.get(i), all_participants.get(j)), ActorRef.noSender());
+			}
 		}
 		
 		PWCalculator.enterInteractiveLoop(listener, pwmaster, ssmaster, shepherd);

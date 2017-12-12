@@ -85,9 +85,10 @@ public class SSWorker extends AbstractLoggingActor {
 	private void handle(SSValidationMessage message) {
 		
 		// Log that we started processing the current task
-		//this.log().info("Start searching for the longest common substring between [{},{}]", message.p1.getName(), message.p2.getName());
+		this.log().info("Start searching for the longest common substring between [{},{}]", message.p1.getName(), message.p2.getName());
 
 		String ss = getLongestCommonSubstring(message.p1.getDna(), message.p2.getDna());
+		this.log().info("Found longest common substring between [{},{}], its {}", message.p1.getName(), message.p2.getName(), ss);
 		Participant p1 = message.p1;
 		Participant p2 = message.p2;
 		p1.setDna_match_partner_id(p2.getId());
@@ -95,7 +96,7 @@ public class SSWorker extends AbstractLoggingActor {
 		p1.setDna_match(ss);
 		p2.setDna_match(ss);
 
-		this.getSender().tell(new SSMaster.FinalizedMessage(p1, p2), this.getSelf());
+		this.getSender().tell(new SSMaster.FinalizedMessage(message.id, p1, p2), this.getSelf());
 	}
 	
 	/**
