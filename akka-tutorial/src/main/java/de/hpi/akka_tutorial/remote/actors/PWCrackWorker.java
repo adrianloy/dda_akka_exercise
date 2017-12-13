@@ -90,7 +90,7 @@ public class PWCrackWorker extends AbstractLoggingActor {
 	private void handle(PWValidationMessage message) {
 		
 		// Log that we started processing the current task
-		this.log().info("Brute force values [start range, end range, hash]: [{},{}] ...", message.rangeMin, message.rangeMax);
+		//this.log().info("Brute force values [start range, end range, hash]: [{},{}] ...", message.rangeMin, message.rangeMax);
 
 		// Iterate over the range of numbers and check if we cracked the hash
 		for (int i = message.rangeMin; i <= message.rangeMax; i++) {

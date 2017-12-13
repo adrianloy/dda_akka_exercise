@@ -85,10 +85,10 @@ public class SSWorker extends AbstractLoggingActor {
 	private void handle(SSValidationMessage message) {
 		
 		// Log that we started processing the current task
-		this.log().info("Start searching for the longest common substring between [{},{}]", message.p1.getName(), message.p2.getName());
+		//this.log().info("Start searching for the longest common substring between [{},{}]", message.p1.getName(), message.p2.getName());
 
 		String ss = getLongestCommonSubstring(message.p1.getDna(), message.p2.getDna());
-		this.log().info("Found longest common substring between [{},{}], its {}", message.p1.getName(), message.p2.getName(), ss);
+		//this.log().info("Found longest common substring between [{},{}], its {}", message.p1.getName(), message.p2.getName(), ss);
 		Participant p1 = message.p1;
 		Participant p2 = message.p2;
 		p1.setDna_match_partner_id(p2.getId());
@@ -105,9 +105,6 @@ public class SSWorker extends AbstractLoggingActor {
 	 * @return A String containing the longest common substring
 	 */
 	private String getLongestCommonSubstring(String a, String b) {
-		if (a.length() != b.length()) {
-			System.out.println("DNA strings do not have the same length");
-		}
 		int[][] D =  new int[a.length()+1][b.length()+1]; //+1 to have extra coloumn and row with 0s
 		int max = 0;
 		int[] max_pos = new int[2];
@@ -136,8 +133,6 @@ public class SSWorker extends AbstractLoggingActor {
 			this.log().info("Something ain't right. This worker seems to produce a wrong result");
 
 		}
-		//System.out.println(lcsa);
-		//System.out.println(lcsb);
 		return lcsa;
 	}
 }

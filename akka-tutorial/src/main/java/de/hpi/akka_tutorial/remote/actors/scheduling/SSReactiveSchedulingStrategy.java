@@ -64,14 +64,14 @@ public class SSReactiveSchedulingStrategy implements SSSchedulingStrategy {
 		 * @return a new subquery or {@code null}
 		 */
 		boolean assignWork(ActorRef worker, ActorRef master) {
-			System.out.println("try to  assign work to query with id " + this.id);
+			//System.out.println("try to  assign work to query with id " + this.id);
 			// we can only assign work to a worker if we dont already have a worker that is doing the job
 			if (this.myworker != null) {
-				System.out.println("  na im busy. cant assign");
+				//System.out.println("  na im busy. cant assign");
 				return false;
 			}
 			else {
-				System.out.println("  did it");
+				//System.out.println("  did it");
 				SSValidationMessage query = new SSWorker.SSValidationMessage(this.id, this.p1, this.p2);
 				worker.tell(query, master);
 				this.myworker = worker;
@@ -143,7 +143,7 @@ public class SSReactiveSchedulingStrategy implements SSSchedulingStrategy {
 		// Create a new tracker for the query
 		QueryTracker tracker = new QueryTracker(taskId, p1, p2);
 		this.queryId2tracker.put(tracker.id, tracker);
-		System.out.println("schedule job with trackerid " + taskId);
+		//System.out.println("schedule job with trackerid " + taskId);
 		// Assign existing, possible free, workers to the new query
 		this.assignQueries();
 	}
@@ -156,7 +156,7 @@ public class SSReactiveSchedulingStrategy implements SSSchedulingStrategy {
 	@Override
 	public void finished(final int taskId, final ActorRef worker) {
 
-		System.out.println("TASK IS finished: " + taskId + " ");
+		//System.out.println("TASK IS finished: " + taskId + " ");
 		// Find the query being processed
 		QueryTracker queryTracker = this.queryId2tracker.get(taskId);
 		
@@ -169,10 +169,10 @@ public class SSReactiveSchedulingStrategy implements SSSchedulingStrategy {
 		if (queryTracker.isComplete()) {
 			// Remove the query tracker
 			this.queryId2tracker.remove(queryTracker.id);
-			System.out.println("REMOVE TASK FROM TRACKER");
+			//System.out.println("REMOVE TASK FROM TRACKER");
 		} else {
 			// Re-assign the now free worker
-			System.out.println("Work aint done " + queryTracker.id + " ");
+			//System.out.println("Work aint done " + queryTracker.id + " ");
 			this.assignQueries();
 		}
 	}

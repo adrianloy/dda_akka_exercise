@@ -117,7 +117,7 @@ public class ExerciseListener extends AbstractLoggingActor {
 	}
 	
 	private void handle(PWListenerMessage message) {
-		System.out.println("WE FOUND A PASSWORD FUUUUCK YEAH!!11");
+		//System.out.println("WE FOUND A PASSWORD FUUUUCK YEAH!!11");
 		this.pw_map.put(message.user, message.password);
 	}
 	private void refreshParticipant(Participant p1) {
@@ -125,7 +125,7 @@ public class ExerciseListener extends AbstractLoggingActor {
 		if (p2.getDna_match().length() < p1.getDna_match().length()) {
 			p2.setDna_match(p1.getDna_match());
 			p2.setDna_match_partner_id(p1.getId());
-			System.out.println(String.format("New longest gene partner for %d: %d with sequence %s", p1.getId(), p2.getId(), p1.getDna_match()));
+			//System.out.println(String.format("New longest gene partner for %d: %d with sequence %s", p1.getId(), p2.getId(), p1.getDna_match()));
 		}
 	}
 	private void handle(SSListenerMessage message) {

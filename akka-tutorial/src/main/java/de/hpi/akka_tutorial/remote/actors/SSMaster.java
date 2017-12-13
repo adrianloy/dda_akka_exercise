@@ -198,11 +198,11 @@ public class SSMaster extends AbstractLoggingActor {
 		// If the worker found the ss tell the listener
 		if (message.participant1.getDna_match_partner_id() > -1) {
 			// Forward the participants with its ss attribute set to the listener
-			this.log().info("told the lister that we found a ss");
+			//this.log().info("told the lister that we found a ss");
 			this.listener.tell(new ExerciseListener.SSListenerMessage(message.participant1, message.participant2), this.getSelf());
 		}
 		else {
-			System.out.println("weird. should not happen. master got finalize message but there is no dna match set");
+			//System.out.println("weird. should not happen. master got finalize message but there is no dna match set");
 		}
 		// Notify the scheduler that the worker has finished its task
 		this.schedulingStrategy.finished(message.requestId, this.getSender());
@@ -222,7 +222,7 @@ public class SSMaster extends AbstractLoggingActor {
 		}
 
 		// Schedule the request
-		System.out.println(" master schedules query with id " + this.nextQueryId);
+		//System.out.println(" master schedules query with id " + this.nextQueryId);
 		this.schedulingStrategy.schedule(this.nextQueryId, message.participant1, message.participant2);
 		this.nextQueryId++;
 	}
