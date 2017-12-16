@@ -46,8 +46,8 @@ public class SSWorker extends AbstractLoggingActor {
 		 */
 		public SSValidationMessage(int id, Participant p1, Participant p2) {
 			this.id = id;
-			this.p1 = p1;
-			this.p2 = p2;
+			this.p1 = new Participant(p1.getId(), p1.getName(), p1.getPwhash(), p1.getDna());
+			this.p2 = new Participant(p2.getId(), p2.getName(), p2.getPwhash(), p2.getDna());
 		}
 		
 		/**

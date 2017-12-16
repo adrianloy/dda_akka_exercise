@@ -21,6 +21,7 @@ public class Participant implements Serializable, Comparable<Participant>{
 		this.pwhash = pwhash;
 		this.dna = dna;
 		this.dna_match_partner_id = -1;
+		this.dna_match = "";
 	}
 
 

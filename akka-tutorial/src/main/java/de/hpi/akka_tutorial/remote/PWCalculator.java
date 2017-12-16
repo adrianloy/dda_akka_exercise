@@ -92,7 +92,7 @@ public class PWCalculator {
 		actorSystem.actorOf(Reaper.props(), Reaper.DEFAULT_NAME);
 
 		// Create the Listener
-		final ActorRef listener = actorSystem.actorOf(ExerciseListener.props(), ExerciseListener.DEFAULT_NAME);
+		final ActorRef listener = actorSystem.actorOf(ExerciseListener.props(all_participants), ExerciseListener.DEFAULT_NAME);
 
 		// Create the Masters
 		final ActorRef pwmaster = actorSystem.actorOf(PWMaster.props(listener, schedulingStrategyFactory, numLocalWorkers), PWMaster.DEFAULT_NAME);
@@ -102,12 +102,12 @@ public class PWCalculator {
 		final ActorRef shepherd = actorSystem.actorOf(Shepherd.props(pwmaster), Shepherd.DEFAULT_NAME);
 
 		// Schedule all pw cracking jobs
-		for (Participant p : all_participants) {
-			pwmaster.tell(new PWMaster.PWHashMessage(p.getName(), p.getPwhash()), ActorRef.noSender());
-		}
+		/*for (Participant p : all_participants) {
+			pwmaster.tell(new PWMaster.PWHashMessage(p.getId(), p.getPwhash()), ActorRef.noSender());
+		}*/
 
 		// schedule all substring matching jobs, reducing combinations to a minimum
-		for (int i = 0; i < all_participants.size(); ++i) { // TODO: change
+		for (int i = 0; i < all_participants.size(); ++i) {
 			for (int j = i+1;  j < all_participants.size(); ++j) {
 				//System.out.println("Schedule job: " + all_participants.get(i).getName() + " " +  all_participants.get(j).getName());
 				ssmaster.tell(new SSMaster.CompareMessage(all_participants.get(i), all_participants.get(j)), ActorRef.noSender());

@@ -14,9 +14,6 @@ import de.hpi.akka_tutorial.remote.actors.PWCrackWorker;
 
 public class PWReactiveSchedulingStrategy implements PWSchedulingStrategy {
 
-	/**
-	 * {@link SchedulingStrategy.Factory} implementation for the {@link PWReactiveSchedulingStrategy}.
-	 */
 	public static class PWFactory implements PWSchedulingStrategy.PWFactory {
 
 		@Override
@@ -45,23 +42,18 @@ public class PWReactiveSchedulingStrategy implements PWSchedulingStrategy {
 		// Keeps track of failed subqueries, so as to reschedule them to some worker.
 		private final Queue<PWCrackWorker.PWValidationMessage> failedSubqueries = new LinkedList<>();
 
-		private final String username;
+		private final Integer userid;
 
 		private final String pwhash;
 
-		QueryTracker(final int id, final String username, final String pwhash) {
+		QueryTracker(final int id, final Integer userid, final String pwhash) {
 			this.id = id;
 			this.remainingRangeStartNumber = 0;
 			this.remainingRangeEndNumber = 9_999_999; // 7 digit password 
-			this.username = username;
+			this.userid = userid;
 			this.pwhash = pwhash;
 		}
 
-		/**
-		 * Assign a subquery of the tracked query to the worker. If a subquery was available, a {@link PWWorker.PWValidationMessage} is send to the worker with master as sender.
-		 *
-		 * @return a new subquery or {@code null}
-		 */
 		boolean assignWork(ActorRef worker, ActorRef master) {
 
 			// Select a failed subquery if any
@@ -71,7 +63,7 @@ public class PWReactiveSchedulingStrategy implements PWSchedulingStrategy {
 			if (subquery == null) {
 				int subqueryRangeSize = Math.min(this.remainingRangeEndNumber - this.remainingRangeStartNumber + 1, MAX_SUBQUERY_RANGE_SIZE);
 				if (subqueryRangeSize > 0) {
-					subquery = new PWCrackWorker.PWValidationMessage(this.id, this.remainingRangeStartNumber, this.remainingRangeStartNumber + subqueryRangeSize - 1, this.username, this.pwhash);
+					subquery = new PWCrackWorker.PWValidationMessage(this.id, this.remainingRangeStartNumber, this.remainingRangeStartNumber + subqueryRangeSize - 1, this.userid, this.pwhash);
 					this.remainingRangeStartNumber += subqueryRangeSize;
 				}
 			}
@@ -137,10 +129,10 @@ public class PWReactiveSchedulingStrategy implements PWSchedulingStrategy {
 	}
 
 	@Override
-	public void schedule(final int taskId, final String username, final String pwhash) {
+	public void schedule(final int taskId, final Integer userid, final String pwhash) {
 
 		// Create a new tracker for the query
-		QueryTracker tracker = new QueryTracker(taskId, username, pwhash);
+		QueryTracker tracker = new QueryTracker(taskId, userid, pwhash);
 		this.queryId2tracker.put(tracker.id, tracker);
 
 		// Assign existing, possible free, workers to the new query

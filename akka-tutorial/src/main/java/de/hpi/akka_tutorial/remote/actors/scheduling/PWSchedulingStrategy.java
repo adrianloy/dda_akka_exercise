@@ -27,7 +27,7 @@ public interface PWSchedulingStrategy {
 	 * @param startNumber first number of the range
 	 * @param endNumber last number of the range
 	 */
-	void schedule(final int taskId, final String username, final String pwhash);
+	void schedule(final int taskId, final Integer username, final String pwhash);
 
 	/**
 	 * Notify the completion of a worker's task.

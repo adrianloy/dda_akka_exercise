@@ -48,19 +48,13 @@ public class PWMaster extends AbstractLoggingActor {
 		
 		private String pwhash;
 		
-		private String username;
+		private Integer userid;
 
-		/**
-		 * Construct a new {@link RangeMessage} object.
-		 * 
-		 * @param startNumber first number in the range to be checked as prime (inclusive)
-		 * @param endNumber last number in the range to be checked as prime (inclusive)
-		 */
-		public PWHashMessage(final String username, final String pwhash) {
+		public PWHashMessage(final Integer userid, final String pwhash) {
 			//this.startNumber = startNumber;
 			//this.endNumber = endNumber;
 			this.pwhash = pwhash;
-			this.username = username;
+			this.userid = userid;
 		}
 
 		/**
@@ -72,7 +66,7 @@ public class PWMaster extends AbstractLoggingActor {
 
 		@Override
 		public String toString() {
-			return String.format("%s[%,d..%,d]", this.getClass().getSimpleName(), this.username, this.pwhash);
+			return String.format("%s[%,d..%,d]", this.getClass().getSimpleName(), this.userid, this.pwhash);
 		}
 	}
 	
@@ -89,19 +83,12 @@ public class PWMaster extends AbstractLoggingActor {
 
 		private int password;
 
-		private String user;
+		private Integer userid;
 
-		/**
-		 * Create a new instance.
-		 *
-		 * @param requestId  the ID of the query that is being served
-		 * @param password   contains the password if found, otherwise -1
-		 * @param isComplete atm always true
-		 */
-		public PWMessage(final int requestId, final int password, final String user) {
+		public PWMessage(final int requestId, final int password, final Integer userid) {
 			this.requestId = requestId;
 			this.password = password;
-			this.user = user;
+			this.userid = userid;
 		}
 		
 		/**
@@ -118,13 +105,13 @@ public class PWMaster extends AbstractLoggingActor {
 				return false;
 			final PWMessage that = (PWMessage) o;
 			return this.requestId == that.requestId &&
-					Objects.equals(this.user, that.user) &&
+					Objects.equals(this.userid, that.userid) &&
 					Objects.equals(this.password, that.password);
 		}
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(this.requestId, this.password, this.user);
+			return Objects.hash(this.requestId, this.password, this.userid);
 		}
 	}
 
@@ -168,13 +155,7 @@ public class PWMaster extends AbstractLoggingActor {
 	// A flag indicating whether this actor is still accepting new range messages
 	private boolean isAcceptingRequests = true;
 
-	/**
-	 * Construct a new {@link PWMaster} object.
-	 * 
-	 * @param listener a reference to an {@link Listener} actor to send results to
-	 * @param schedulingStrategyFactory defines which {@link SchedulingStrategy} to use
-	 * @param numLocalWorkers number of workers that this master should start locally
-	 */
+
 	public PWMaster(final ActorRef listener, PWSchedulingStrategy.PWFactory schedulingStrategyFactory, int numLocalWorkers) {
 		
 		// Save the reference to the Listener actor
@@ -240,7 +221,7 @@ public class PWMaster extends AbstractLoggingActor {
 			}
 		
 			// Forward the cracked password to the listener
-			this.listener.tell(new ExerciseListener.PWListenerMessage(pw, message.user), this.getSelf());
+			this.listener.tell(new ExerciseListener.PWListenerMessage(pw, message.userid), this.getSelf());
 		}
 		// Notify the scheduler that the worker has finished its task
 		this.schedulingStrategy.finished(message.requestId, this.getSender());
@@ -260,7 +241,7 @@ public class PWMaster extends AbstractLoggingActor {
 		}
 
 		// Schedule the request
-		this.schedulingStrategy.schedule(this.nextQueryId, message.username, message.pwhash);
+		this.schedulingStrategy.schedule(this.nextQueryId, message.userid, message.pwhash);
 		this.nextQueryId++;
 	}
 

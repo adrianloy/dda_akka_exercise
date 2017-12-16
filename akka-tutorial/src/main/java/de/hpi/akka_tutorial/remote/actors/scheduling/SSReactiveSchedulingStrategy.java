@@ -175,6 +175,8 @@ public class SSReactiveSchedulingStrategy implements SSSchedulingStrategy {
 			//System.out.println("Work aint done " + queryTracker.id + " ");
 			this.assignQueries();
 		}
+		this.assignQueries();
+
 	}
 
 	@Override
