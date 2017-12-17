@@ -19,7 +19,7 @@ public class ExerciseMain {
 		// Read CSV file, path to is should be in args[0]. 
 		// Then start a PWmaster with 4 local workers
 		String csvFile = "";
-		if (args.length == 2 && args[0] == "--path") {
+		if (args.length ==2 && args[0].equals("--path")) {
 			csvFile = args[1];
 		} else {
 			csvFile = "./students.csv";
